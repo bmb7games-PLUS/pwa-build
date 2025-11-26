@@ -92,7 +92,7 @@ validate_version() {
 
 # Função para validar build number
 validate_build() {
-    local build="$1"
+    local build="${1:-$BUILD_NUMBER_INCREMENT}"
     if [[ ! "$build" =~ ^[0-9]+$ ]]; then
         log_error "Build number inválido: $build"
         log_info "O build number deve ser um número inteiro positivo"
@@ -127,7 +127,7 @@ if [[ -z "$1" ]]; then
 fi
 
 NEW_VERSION="$1"
-NEW_BUILD="$2"
+NEW_BUILD="${2:-$BUILD_NUMBER_INCREMENT}"
 
 # Validar versão
 validate_version "$NEW_VERSION"

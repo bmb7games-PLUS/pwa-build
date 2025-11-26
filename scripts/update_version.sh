@@ -3,25 +3,16 @@
 # =============================================================================
 # Script para alterar a versão e build number no pubspec.yaml
 # =============================================================================
-# Uso: ./update_version.sh [opções]
+# Uso: ./update_version.sh <versão> <build_number>
 #
-# Opções:
-#   -v, --version <versão>     Define a versão (ex: 1.2.3)
-#   -b, --build <número>       Define o build number manualmente
-#   --use-codemagic            Usa a variável BUILD_NUMBER do Codemagic
-#   --bump-major               Incrementa a versão major (x.0.0)
-#   --bump-minor               Incrementa a versão minor (0.x.0)
-#   --bump-patch               Incrementa a versão patch (0.0.x)
-#   --bump-build               Incrementa o build number
-#   -h, --help                 Exibe esta ajuda
-#
-# Variáveis do Codemagic suportadas:
-#   - BUILD_NUMBER_INCREMENT: Número do build auto-incrementado pelo Codemagic
+# Parâmetros:
+#   versão        Versão da aplicação (ex: 1.2.3)
+#   build_number  Número do build (ex: 10) - opcional, usa BUILD_NUMBER_INCREMENT do Codemagic se não informado
 #
 # Exemplos:
-#   ./update_version.sh -v 2.0.0 --use-codemagic
-#   ./update_version.sh --bump-patch --use-codemagic
-#   ./update_version.sh -v 1.5.0 -b 100
+#   ./update_version.sh 2.0.0 100
+#   ./update_version.sh 1.5.0              # Usa BUILD_NUMBER_INCREMENT do Codemagic
+#   ./update_version.sh 1.5.0 $BUILD_NUMBER_INCREMENT
 # =============================================================================
 
 set -e
@@ -38,15 +29,6 @@ NC='\033[0m' # No Color
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 PUBSPEC_FILE="$PROJECT_ROOT/pubspec.yaml"
-
-# Variáveis
-NEW_VERSION=""
-NEW_BUILD=""
-USE_CODEMAGIC=false
-BUMP_MAJOR=false
-BUMP_MINOR=false
-BUMP_PATCH=false
-BUMP_BUILD=false
 
 # Funções de log
 log_info() {
@@ -72,26 +54,18 @@ show_help() {
     echo "  Atualizar Versão - Flutter App"
     echo -e "==========================================${NC}"
     echo ""
-    echo "Uso: $0 [opções]"
+    echo "Uso: $0 <versão> [build_number]"
     echo ""
-    echo "Opções:"
-    echo "  -v, --version <versão>     Define a versão (ex: 1.2.3)"
-    echo "  -b, --build <número>       Define o build number manualmente"
-    echo "  --use-codemagic            Usa a variável BUILD_NUMBER do Codemagic"
-    echo "  --bump-major               Incrementa a versão major (x.0.0)"
-    echo "  --bump-minor               Incrementa a versão minor (0.x.0)"
-    echo "  --bump-patch               Incrementa a versão patch (0.0.x)"
-    echo "  --bump-build               Incrementa o build number"
-    echo "  -h, --help                 Exibe esta ajuda"
+    echo "Parâmetros:"
+    echo "  versão        Versão da aplicação (ex: 1.2.3)"
+    echo "  build_number  Número do build (ex: 10) - opcional"
     echo ""
-    echo -e "${YELLOW}Variáveis do Codemagic suportadas:${NC}"
-    echo "  - BUILD_NUMBER_INCREMENT: Número do build auto-incrementado pelo Codemagic"
+    echo "Se build_number não for informado, usa a variável BUILD_NUMBER_INCREMENT do Codemagic."
     echo ""
     echo -e "${YELLOW}Exemplos:${NC}"
-    echo "  $0 -v 2.0.0 --use-codemagic"
-    echo "  $0 --bump-patch --use-codemagic"
-    echo "  $0 -v 1.5.0 -b 100"
-    echo "  $0 --bump-minor --bump-build"
+    echo "  $0 2.0.0 100"
+    echo "  $0 1.5.0"
+    echo "  $0 1.5.0 \$BUILD_NUMBER_INCREMENT"
     echo ""
 }
 
@@ -104,20 +78,6 @@ get_current_version() {
     
     local version_line=$(grep "^version:" "$PUBSPEC_FILE")
     echo "$version_line" | sed 's/version: //'
-}
-
-# Função para extrair partes da versão
-parse_version() {
-    local full_version="$1"
-    
-    # Separa versão do build number
-    VERSION_PART=$(echo "$full_version" | cut -d'+' -f1)
-    BUILD_PART=$(echo "$full_version" | cut -d'+' -f2)
-    
-    # Separa major, minor, patch
-    MAJOR=$(echo "$VERSION_PART" | cut -d'.' -f1)
-    MINOR=$(echo "$VERSION_PART" | cut -d'.' -f2)
-    PATCH=$(echo "$VERSION_PART" | cut -d'.' -f3)
 }
 
 # Função para validar formato da versão
@@ -140,91 +100,15 @@ validate_build() {
     fi
 }
 
-# Função para obter build number do Codemagic
-get_codemagic_build_number() {
-    # Codemagic define BUILD_NUMBER_INCREMENT
-    if [[ -n "$BUILD_NUMBER_INCREMENT" ]]; then
-        echo "$BUILD_NUMBER_INCREMENT"
-    else
-        log_warning "Variável BUILD_NUMBER_INCREMENT do Codemagic não encontrada"
-        log_info "Usando build number atual do pubspec.yaml"
-        echo ""
-    fi
-}
-
 # Função para atualizar o pubspec.yaml
 update_pubspec() {
     local new_full_version="$1"
     
-    # Faz backup do arquivo original
-    cp "$PUBSPEC_FILE" "$PUBSPEC_FILE.bak"
-    
     # Atualiza a versão no pubspec.yaml
     sed -i '' "s/^version: .*/version: $new_full_version/" "$PUBSPEC_FILE"
     
-    # Remove backup se tudo correu bem
-    rm "$PUBSPEC_FILE.bak"
-    
     log_success "pubspec.yaml atualizado para versão: $new_full_version"
 }
-
-# Função para exibir informações da versão
-show_version_info() {
-    local current="$1"
-    local new="$2"
-    
-    echo ""
-    echo -e "${CYAN}Informações de Versão:${NC}"
-    echo -e "  Versão atual:  ${YELLOW}$current${NC}"
-    echo -e "  Nova versão:   ${GREEN}$new${NC}"
-    echo ""
-}
-
-# =============================================================================
-# Processamento de argumentos
-# =============================================================================
-
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        -v|--version)
-            NEW_VERSION="$2"
-            shift 2
-            ;;
-        -b|--build)
-            NEW_BUILD="$2"
-            shift 2
-            ;;
-        --use-codemagic)
-            USE_CODEMAGIC=true
-            shift
-            ;;
-        --bump-major)
-            BUMP_MAJOR=true
-            shift
-            ;;
-        --bump-minor)
-            BUMP_MINOR=true
-            shift
-            ;;
-        --bump-patch)
-            BUMP_PATCH=true
-            shift
-            ;;
-        --bump-build)
-            BUMP_BUILD=true
-            shift
-            ;;
-        -h|--help)
-            show_help
-            exit 0
-            ;;
-        *)
-            log_error "Opção desconhecida: $1"
-            show_help
-            exit 1
-            ;;
-    esac
-done
 
 # =============================================================================
 # MAIN
@@ -236,6 +120,34 @@ echo "  Atualizar Versão - Flutter App"
 echo -e "==========================================${NC}"
 echo ""
 
+# Verificar se foi passado pelo menos 1 argumento (versão)
+if [[ -z "$1" ]]; then
+    show_help
+    exit 1
+fi
+
+NEW_VERSION="$1"
+NEW_BUILD="$2"
+
+# Validar versão
+validate_version "$NEW_VERSION"
+
+# Se build não foi informado, tenta usar BUILD_NUMBER_INCREMENT do Codemagic
+if [[ -z "$NEW_BUILD" ]]; then
+    if [[ -n "$BUILD_NUMBER_INCREMENT" ]]; then
+        NEW_BUILD="$BUILD_NUMBER_INCREMENT"
+        log_info "Usando BUILD_NUMBER_INCREMENT do Codemagic: $NEW_BUILD"
+    else
+        # Extrai o build number atual do pubspec.yaml
+        CURRENT_VERSION=$(get_current_version)
+        NEW_BUILD=$(echo "$CURRENT_VERSION" | cut -d'+' -f2)
+        log_warning "BUILD_NUMBER_INCREMENT não encontrado, mantendo build atual: $NEW_BUILD"
+    fi
+fi
+
+# Validar build number
+validate_build "$NEW_BUILD"
+
 # Verificar se o pubspec.yaml existe
 if [[ ! -f "$PUBSPEC_FILE" ]]; then
     log_error "Arquivo pubspec.yaml não encontrado!"
@@ -243,86 +155,27 @@ if [[ ! -f "$PUBSPEC_FILE" ]]; then
 fi
 
 # Obter versão atual
-CURRENT_FULL_VERSION=$(get_current_version)
-parse_version "$CURRENT_FULL_VERSION"
+CURRENT_VERSION=$(get_current_version)
+log_info "Versão atual: $CURRENT_VERSION"
 
-log_info "Versão atual: $CURRENT_FULL_VERSION"
-log_info "  Major: $MAJOR, Minor: $MINOR, Patch: $PATCH, Build: $BUILD_PART"
-echo ""
-
-# Detectar ambiente Codemagic
-if [[ -n "$CI" ]] && [[ -n "$FCI_BUILD_ID" ]]; then
-    log_info "Ambiente Codemagic detectado"
-    log_info "  FCI_BUILD_ID: $FCI_BUILD_ID"
-    [[ -n "$BUILD_NUMBER_INCREMENT" ]] && log_info "  BUILD_NUMBER_INCREMENT: $BUILD_NUMBER_INCREMENT"
-    echo ""
-fi
-
-# Processar bumps de versão
-if [[ "$BUMP_MAJOR" == true ]]; then
-    MAJOR=$((MAJOR + 1))
-    MINOR=0
-    PATCH=0
-    log_info "Incrementando versão major"
-fi
-
-if [[ "$BUMP_MINOR" == true ]]; then
-    MINOR=$((MINOR + 1))
-    PATCH=0
-    log_info "Incrementando versão minor"
-fi
-
-if [[ "$BUMP_PATCH" == true ]]; then
-    PATCH=$((PATCH + 1))
-    log_info "Incrementando versão patch"
-fi
-
-# Definir nova versão (se especificada via argumento)
-if [[ -n "$NEW_VERSION" ]]; then
-    validate_version "$NEW_VERSION"
-    FINAL_VERSION="$NEW_VERSION"
-else
-    FINAL_VERSION="$MAJOR.$MINOR.$PATCH"
-fi
-
-# Definir novo build number
-if [[ "$USE_CODEMAGIC" == true ]]; then
-    CODEMAGIC_BUILD=$(get_codemagic_build_number)
-    if [[ -n "$CODEMAGIC_BUILD" ]]; then
-        FINAL_BUILD="$CODEMAGIC_BUILD"
-        log_info "Usando BUILD_NUMBER do Codemagic: $FINAL_BUILD"
-    else
-        FINAL_BUILD="$BUILD_PART"
-    fi
-elif [[ -n "$NEW_BUILD" ]]; then
-    validate_build "$NEW_BUILD"
-    FINAL_BUILD="$NEW_BUILD"
-elif [[ "$BUMP_BUILD" == true ]]; then
-    FINAL_BUILD=$((BUILD_PART + 1))
-    log_info "Incrementando build number"
-else
-    FINAL_BUILD="$BUILD_PART"
-fi
-
-# Construir versão final
-FINAL_FULL_VERSION="$FINAL_VERSION+$FINAL_BUILD"
+# Construir nova versão
+NEW_FULL_VERSION="$NEW_VERSION+$NEW_BUILD"
 
 # Verificar se há alterações
-if [[ "$FINAL_FULL_VERSION" == "$CURRENT_FULL_VERSION" ]]; then
-    log_warning "Nenhuma alteração necessária. Versão já está em: $CURRENT_FULL_VERSION"
+if [[ "$NEW_FULL_VERSION" == "$CURRENT_VERSION" ]]; then
+    log_warning "Nenhuma alteração necessária. Versão já está em: $CURRENT_VERSION"
     exit 0
 fi
 
 # Exibir informações
-show_version_info "$CURRENT_FULL_VERSION" "$FINAL_FULL_VERSION"
+echo ""
+echo -e "  Versão atual:  ${YELLOW}$CURRENT_VERSION${NC}"
+echo -e "  Nova versão:   ${GREEN}$NEW_FULL_VERSION${NC}"
+echo ""
 
 # Atualizar pubspec.yaml
-update_pubspec "$FINAL_FULL_VERSION"
+update_pubspec "$NEW_FULL_VERSION"
 
 echo ""
 log_success "Versão atualizada com sucesso!"
-echo ""
-echo -e "${YELLOW}Próximos passos:${NC}"
-echo "  1. Verifique as alterações: git diff pubspec.yaml"
-echo "  2. Commit as alterações: git add pubspec.yaml && git commit -m 'bump: $FINAL_FULL_VERSION'"
 echo ""

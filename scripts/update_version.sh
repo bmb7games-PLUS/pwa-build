@@ -128,15 +128,15 @@ fi
 
 NEW_VERSION="$1"
 NEW_BUILD="${2:-$BUILD_NUMBER_INCREMENT}"
+NEW_BUILD=$((NEW_BUILD + PROJECT_BUILD_NUMBER))
 
 # Validar versão
 validate_version "$NEW_VERSION"
 
 # Se build não foi informado, tenta usar BUILD_NUMBER_INCREMENT do Codemagic
 if [[ -z "$NEW_BUILD" ]]; then
-    if [[ -n "$BUILD_NUMBER_INCREMENT" ]]; then
-        NEW_BUILD="$BUILD_NUMBER_INCREMENT"
-        log_info "Usando BUILD_NUMBER_INCREMENT do Codemagic: $NEW_BUILD"
+    if [[ -n "$NEW_BUILD" ]]; then
+        log_info "Usando o numero de build: $NEW_BUILD"
     else
         # Extrai o build number atual do pubspec.yaml
         CURRENT_VERSION=$(get_current_version)

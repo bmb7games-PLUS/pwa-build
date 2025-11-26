@@ -84,13 +84,15 @@ class _MyHomePageState extends State<MyHomePage> {
         }
       },
       child: Scaffold(
-        body: InAppWebView(
-          initialUrlRequest: URLRequest(
-            url: WebUri(dotenv.env['HOST_URL']!),
+        body: SafeArea(
+          child: InAppWebView(
+            initialUrlRequest: URLRequest(
+              url: WebUri(dotenv.env['HOST_URL']!),
+            ),
+            onWebViewCreated: (controller) {
+              _webViewController = controller;
+            },
           ),
-          onWebViewCreated: (controller) {
-            _webViewController = controller;
-          },
         ),
       ),
     );

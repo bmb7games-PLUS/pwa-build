@@ -34,6 +34,9 @@ MAIN_DART="$PROJECT_ROOT/lib/main.dart"
 FIREBASE_OPTIONS="$PROJECT_ROOT/lib/firebase_options.dart"
 GOOGLE_SERVICES_JSON="$PROJECT_ROOT/android/app/google-services.json"
 GOOGLE_SERVICE_INFO_PLIST="$PROJECT_ROOT/ios/Runner/GoogleService-Info.plist"
+ANDROID_BUILD_GRADLE="$PROJECT_ROOT/android/build.gradle.kts"
+ANDROID_APP_BUILD_GRADLE="$PROJECT_ROOT/android/app/build.gradle.kts"
+ANDROID_SETTINGS_GRADLE="$PROJECT_ROOT/android/settings.gradle.kts"
 
 # Funções de log
 log_info() {
@@ -232,6 +235,44 @@ EOF
     log_success "Arquivo firebase_options.dart criado!"
 }
 
+# Função para configurar o Gradle do Android
+configure_android_gradle() {
+    log_info "Configurando Gradle do Android para Firebase..."
+    
+    # Adicionar plugin do Google Services ao settings.gradle.kts
+    if ! grep -q "com.google.gms.google-services" "$ANDROID_SETTINGS_GRADLE"; then
+        log_info "Adicionando plugin Google Services ao settings.gradle.kts..."
+        
+        # Adiciona o plugin na seção de plugins
+        sed -i '' 's/id("org.jetbrains.kotlin.android") version "[^"]*" apply false/id("org.jetbrains.kotlin.android") version "2.1.0" apply false\n    id("com.google.gms.google-services") version "4.4.2" apply false/' "$ANDROID_SETTINGS_GRADLE"
+        
+        log_success "Plugin adicionado ao settings.gradle.kts"
+    else
+        log_warning "Plugin Google Services já existe no settings.gradle.kts"
+    fi
+    
+    # Adicionar plugin ao app/build.gradle.kts
+    if ! grep -q "com.google.gms.google-services" "$ANDROID_APP_BUILD_GRADLE"; then
+        log_info "Adicionando plugin Google Services ao app/build.gradle.kts..."
+        
+        # Adiciona o plugin após o flutter plugin
+        sed -i '' 's/id("dev.flutter.flutter-gradle-plugin")/id("dev.flutter.flutter-gradle-plugin")\n    id("com.google.gms.google-services")/' "$ANDROID_APP_BUILD_GRADLE"
+        
+        log_success "Plugin adicionado ao app/build.gradle.kts"
+    else
+        log_warning "Plugin Google Services já existe no app/build.gradle.kts"
+    fi
+    
+    # Verificar e ajustar minSdk se necessário (Firebase requer minSdk 21+)
+    if grep -q "minSdk = flutter.minSdkVersion" "$ANDROID_APP_BUILD_GRADLE"; then
+        log_info "Ajustando minSdk para 21 (requisito do Firebase)..."
+        sed -i '' 's/minSdk = flutter.minSdkVersion/minSdk = Math.max(flutter.minSdkVersion, 21)/' "$ANDROID_APP_BUILD_GRADLE"
+        log_success "minSdk ajustado"
+    fi
+    
+    log_success "Gradle do Android configurado!"
+}
+
 # Função para atualizar o main.dart
 update_main_dart() {
     log_info "Atualizando main.dart com Firebase..."
@@ -400,6 +441,11 @@ extract_ios_config
 
 echo ""
 
+# Configurar Gradle do Android
+configure_android_gradle
+
+echo ""
+
 # Criar firebase_options.dart
 create_firebase_options
 
@@ -411,6 +457,8 @@ log_success "Firebase configurado com sucesso!"
 echo ""
 echo -e "${YELLOW}Arquivos criados/atualizados:${NC}"
 echo "  ✓ android/app/google-services.json"
+echo "  ✓ android/settings.gradle.kts (plugin Google Services)"
+echo "  ✓ android/app/build.gradle.kts (plugin Google Services)"
 echo "  ✓ ios/Runner/GoogleService-Info.plist"
 echo "  ✓ lib/firebase_options.dart"
 echo "  ✓ lib/main.dart"

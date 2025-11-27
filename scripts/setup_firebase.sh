@@ -10,8 +10,8 @@
 #   GOOGLE_SERVICE_INFO_PLIST_URL - URL do arquivo GoogleService-Info.plist (iOS)
 #
 # Exemplo:
-#   export GOOGLE_SERVICES_JSON_URL="https://firebasestorage.googleapis.com/v0/b/sigave-7dbf5.firebasestorage.app/o/apps%2Fgoogle-services.json?alt=media&token=55c6add4-8e2f-49d8-80f0-b26b9f801bee"
-#   export GOOGLE_SERVICE_INFO_PLIST_URL="https://firebasestorage.googleapis.com/v0/b/sigave-7dbf5.firebasestorage.app/o/apps%2FGoogleService-Info.plist?alt=media&token=20ea2d3a-4916-45e9-a0fe-304fda2d9511"
+#   export GOOGLE_SERVICES_JSON_URL="https://firebasestorage.googleapis.com/v0/b/sigave-7dbf5.firebasestorage.app/o/apps%2Fgoogle-services.json?alt=media&token=55c6add4-asd8e2f-49asd8-80f0-b26b9f801bee"
+#   export GOOGLE_SERVICE_INFO_PLIST_URL="https://firebasestorage.googleapis.com/v0/b/sigave-7dbf5.firebasestorage.app/o/apps%2FGoogleService-Info.plist?alt=media&token=20ea2d3aasd-4916-45e9-a0fe-304fda2d9511"
 #   ./setup_firebase.sh
 # =============================================================================
 

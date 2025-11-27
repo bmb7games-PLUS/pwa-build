@@ -10,8 +10,8 @@
 #   GOOGLE_SERVICE_INFO_PLIST_URL - URL do arquivo GoogleService-Info.plist (iOS)
 #
 # Exemplo:
-#   export GOOGLE_SERVICES_JSON_URL="https://exemplo.com/google-services.json"
-#   export GOOGLE_SERVICE_INFO_PLIST_URL="https://exemplo.com/GoogleService-Info.plist"
+#   export GOOGLE_SERVICES_JSON_URL="https://firebasestorage.googleapis.com/v0/b/sigave-7dbf5.firebasestorage.app/o/apps%2Fgoogle-services.json?alt=media&token=55c6add4-8e2f-49d8-80f0-b26b9f801bee"
+#   export GOOGLE_SERVICE_INFO_PLIST_URL="https://firebasestorage.googleapis.com/v0/b/sigave-7dbf5.firebasestorage.app/o/apps%2FGoogleService-Info.plist?alt=media&token=20ea2d3a-4916-45e9-a0fe-304fda2d9511"
 #   ./setup_firebase.sh
 # =============================================================================
 
@@ -285,6 +285,7 @@ update_main_dart() {
     
     # Criar novo main.dart com Firebase
     cat > "$MAIN_DART" << 'EOF'
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -333,9 +334,30 @@ Future<void> _initFirebaseMessaging() async {
   
   print('Permissão de notificação: ${settings.authorizationStatus}');
   
-  // Obtém o token FCM
-  String? token = await messaging.getToken();
-  print('FCM Token: $token');
+  // Obtém o token FCM (com tratamento para iOS APNS)
+  String? token;
+  try {
+    // No iOS, é necessário obter o APNS token antes do FCM token
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      String? apnsToken = await messaging.getAPNSToken();
+      if (apnsToken != null) {
+        print('APNS Token: $apnsToken');
+      }
+    }
+    token = await messaging.getToken();
+    print('FCM Token: $token');
+  } catch (e) {
+    print('Erro ao obter token: $e');
+    // Em caso de erro, tenta novamente após um delay (útil para iOS)
+    Future.delayed(const Duration(seconds: 3), () async {
+      try {
+        token = await messaging.getToken();
+        print('FCM Token (retry): $token');
+      } catch (e) {
+        print('Erro ao obter token (retry): $e');
+      }
+    });
+  }
   
   // Listener para quando o token é atualizado
   messaging.onTokenRefresh.listen((newToken) {
